@@ -112,6 +112,19 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="@id/audio_selection" />
 
+    <TextView
+        android:id="@+id/change_path"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/transparent"
+        android:lines="1"
+        android:maxLines="1"
+        android:textColor="@color/txWhite"
+        android:textSize="30sp"
+        android:text="Change Path"
+        app:layout_constraintTop_toTopOf="@id/land_horizontal_top_guideline"
+        app:layout_constraintStart_toStartOf="@id/land_vertical_left_guideline" />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/land_horizontal_guideline"
         android:layout_width="wrap_content"
@@ -125,4 +138,19 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         app:layout_constraintGuide_percent=".33" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/land_horizontal_top_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent=".05" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/land_vertical_left_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent=".05" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

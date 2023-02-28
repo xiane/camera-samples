@@ -96,6 +96,9 @@ class CaptureFragment : Fragment() {
     private val mainThreadExecutor by lazy { ContextCompat.getMainExecutor(requireContext()) }
     private var enumerationDeferred:Deferred<Unit>? = null
 
+    private var currentRecordingTimeSum:Long = 0
+    private var currentRecordingContinue:Boolean = false
+
     // main cameraX capture functions
     /**
      *   Always bind preview + video capture use case combinations in this sample
@@ -190,17 +193,6 @@ class CaptureFragment : Fragment() {
             recordingState = event
 
         updateUI(event)
-
-        if (event is VideoRecordEvent.Finalize) {
-             // display the captured video
-            lifecycleScope.launch {
-                navController.navigate(
-                    CaptureFragmentDirections.actionCaptureToVideoViewer(
-                        event.outputResults.outputUri
-                    )
-                )
-            }
-        }
     }
 
     /**
@@ -308,6 +300,9 @@ class CaptureFragment : Fragment() {
                     recordingState is VideoRecordEvent.Finalize)
                 {
                     enableUI(false)  // Our eventListener will turn on the Recording UI.
+                    currentRecordingTimeSum = 0
+                    currentRecordingContinue = true
+                    captureViewBinding.changePath.visibility = View.INVISIBLE
                     startRecording()
                 } else {
                     when (recordingState) {
@@ -336,6 +331,7 @@ class CaptureFragment : Fragment() {
                 if (recording != null) {
                     recording.stop()
                     currentRecording = null
+                    currentRecordingContinue = false
                 }
                 captureViewBinding.captureButton.setImageResource(R.drawable.ic_start)
             }
@@ -350,6 +346,12 @@ class CaptureFragment : Fragment() {
             }
         }
         captureLiveStatus.value = getString(R.string.Idle)
+
+        captureViewBinding.changePath.apply {
+            setOnClickListener {
+
+            }
+        }
     }
 
     /**
@@ -365,16 +367,34 @@ class CaptureFragment : Fragment() {
     private fun updateUI(event: VideoRecordEvent) {
         val state = if (event is VideoRecordEvent.Status) recordingState.getNameString()
                     else event.getNameString()
+
+        val stats = event.recordingStats
+        val size = stats.numBytesRecorded / 1000
+        val time = java.util.concurrent.TimeUnit.NANOSECONDS
+            .toSeconds(currentRecordingTimeSum + stats.recordedDurationNanos)
+
         when (event) {
                 is VideoRecordEvent.Status -> {
-                    // placeholder: we update the UI with new status after this when() block,
-                    // nothing needs to do here.
+                    // placeholder: we update the UI with new status after this when() block.
+                    // check size and save intervals.
+                    if (size > 5 * 1024 * 2) {
+                        val recording = currentRecording
+                        if (recording != null) {
+                            recording.stop()
+                            currentRecording = null
+                        }
+                    }
                 }
                 is VideoRecordEvent.Start -> {
                     showUI(UiState.RECORDING, event.getNameString())
                 }
                 is VideoRecordEvent.Finalize-> {
-                    showUI(UiState.FINALIZED, event.getNameString())
+                    if (currentRecordingContinue) {
+                        currentRecordingTimeSum += event.recordingStats.recordedDurationNanos
+                        startRecording()
+                        Log.d(TAG, "uri " + event.outputResults.outputUri)
+                    } else
+                        showUI(UiState.FINALIZED, event.getNameString())
                 }
                 is VideoRecordEvent.Pause -> {
                     captureViewBinding.captureButton.setImageResource(R.drawable.ic_resume)
@@ -384,9 +404,6 @@ class CaptureFragment : Fragment() {
                 }
         }
 
-        val stats = event.recordingStats
-        val size = stats.numBytesRecorded / 1000
-        val time = java.util.concurrent.TimeUnit.NANOSECONDS.toSeconds(stats.recordedDurationNanos)
         var text = "${state}: recorded ${size}KB, in ${time}second"
         if(event is VideoRecordEvent.Finalize)
             text = "${text}\nFile saved to: ${event.outputResults.outputUri}"
@@ -405,7 +422,8 @@ class CaptureFragment : Fragment() {
                 captureViewBinding.captureButton,
                 captureViewBinding.stopButton,
                 captureViewBinding.audioSelection,
-                captureViewBinding.qualitySelection).forEach {
+                captureViewBinding.qualitySelection,
+                captureViewBinding.changePath).forEach {
                     it.isEnabled = enable
         }
         // disable the camera button if no device to switch
@@ -447,6 +465,7 @@ class CaptureFragment : Fragment() {
                 UiState.FINALIZED -> {
                     it.captureButton.setImageResource(R.drawable.ic_start)
                     it.stopButton.visibility = View.INVISIBLE
+                    it.changePath.visibility = View.VISIBLE
                 }
                 else -> {
                     val errorMsg = "Error: showUI($state) is not supported"
