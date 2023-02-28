@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
 
         // Fix the screen orientation for this sample to focus on cameraX API
         // rather than UI
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
     }
 
     override fun onResume() {
