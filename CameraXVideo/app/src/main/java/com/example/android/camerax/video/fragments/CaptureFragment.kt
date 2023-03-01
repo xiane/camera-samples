@@ -29,16 +29,26 @@
 package com.example.android.camerax.video.fragments
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
+import android.os.Build
 import java.text.SimpleDateFormat
 import android.os.Bundle
+import android.os.Environment
+import android.os.storage.StorageManager
 import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
@@ -54,6 +64,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.core.view.updateLayoutParams
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.whenCreated
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -62,6 +73,7 @@ import com.example.android.camerax.video.extensions.getAspectRatio
 import com.example.android.camerax.video.extensions.getAspectRatioString
 import com.example.android.camerax.video.extensions.getNameString
 import kotlinx.coroutines.*
+import java.io.File
 import java.util.*
 
 class CaptureFragment : Fragment() {
@@ -81,6 +93,9 @@ class CaptureFragment : Fragment() {
     private lateinit var videoCapture: VideoCapture<Recorder>
     private var currentRecording: Recording? = null
     private lateinit var recordingState:VideoRecordEvent
+
+    private lateinit var getPath: ActivityResultLauncher<Intent>
+    private var pathUri:Uri? = null
 
     // Camera UI  states and inputs
     enum class UiState {
@@ -168,18 +183,30 @@ class CaptureFragment : Fragment() {
                 .format(System.currentTimeMillis()) + ".mp4"
         val contentValues = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, name)
+            put(MediaStore.Video.Media.TITLE, name)
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
         }
-        val mediaStoreOutput = MediaStoreOutputOptions.Builder(
-            requireActivity().contentResolver,
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
-            .setContentValues(contentValues)
-            .build()
+         val pendingRecording = pathUri?.let { uri ->
+             val folder = DocumentFile.fromTreeUri(requireContext(), uri)
+             val sub = folder?.listFiles()
+             val subFolder = sub?.find { it.name == "cctv" } ?: folder?.createDirectory("cctv")
+             val file = subFolder?.createFile("video/mp4", name)
+             val fileDescriptor =
+                 requireContext().contentResolver.openFileDescriptor(file!!.uri, "w")
+             val fileDescriptorOutputOption =
+                 FileDescriptorOutputOptions.Builder(fileDescriptor!!).build()
+             videoCapture.output
+                 .prepareRecording(requireContext(), fileDescriptorOutputOption)
+        } ?: run {
+            val file = File("/sdcard/DCIM/cctv", name)
+            val fileOutputOption = FileOutputOptions.Builder(file).build()
+            videoCapture.output
+                .prepareRecording(requireActivity(), fileOutputOption)
+        }
 
-        // configure Recorder and Start recording to the mediaStoreOutput.
-        currentRecording = videoCapture.output
-               .prepareRecording(requireActivity(), mediaStoreOutput)
-               .apply { if (audioEnabled) withAudioEnabled() }
-               .start(mainThreadExecutor, captureListener)
+        currentRecording = pendingRecording
+            .apply { if (audioEnabled) withAudioEnabled() }
+            .start(mainThreadExecutor, captureListener)
 
         Log.i(TAG, "Recording started")
     }
@@ -347,9 +374,40 @@ class CaptureFragment : Fragment() {
         }
         captureLiveStatus.value = getString(R.string.Idle)
 
+        getPath = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                pathUri = result.data?.data
+                requireContext().contentResolver
+                    .takePersistableUriPermission(
+                        pathUri!!,
+                        (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    )
+            }
+        }
+
         captureViewBinding.changePath.apply {
             setOnClickListener {
+                val manager = requireActivity().getSystemService(Context.STORAGE_SERVICE) as StorageManager
+                val volumes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    manager.storageVolumes
+                } else {
+                    TODO("VERSION.SDK_INT < N")
+                }
 
+                var volumeArray: Array<String> = emptyArray()
+                volumes.forEach { volume ->
+                    volumeArray += volume.getDescription(requireContext())
+                }
+
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Select target Media")
+                    .setItems(volumeArray) { dialog, which ->
+                        getPath.launch(
+                            volumes[which].createAccessIntent(
+                                Environment.DIRECTORY_DCIM
+                            )
+                        )
+                    }.show()
             }
         }
     }
@@ -466,6 +524,7 @@ class CaptureFragment : Fragment() {
                     it.captureButton.setImageResource(R.drawable.ic_start)
                     it.stopButton.visibility = View.INVISIBLE
                     it.changePath.visibility = View.VISIBLE
+                    it.changePath.isEnabled = true
                 }
                 else -> {
                     val errorMsg = "Error: showUI($state) is not supported"
