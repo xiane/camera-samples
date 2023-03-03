@@ -33,6 +33,18 @@
         app:layout_constraintDimensionRatio="H,16:9"/>
 
     <CheckBox
+        android:id="@+id/rolling_selection"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:translationY="3dp"
+        android:buttonTint="@color/ic_white"
+        android:text="@string/rolling"
+        android:textColor="@color/txWhite"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="@id/land_vertical_guideline"
+        app:layout_constraintTop_toBottomOf="@id/land_horizontal_guideline" />
+
+    <CheckBox
         android:id="@+id/audio_selection"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

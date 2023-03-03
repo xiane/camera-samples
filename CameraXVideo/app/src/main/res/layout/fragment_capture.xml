@@ -44,6 +44,18 @@
         app:layout_constraintTop_toBottomOf="@id/horizontal_guideline"
         app:layout_constraintStart_toStartOf="@id/previewView" />
 
+    <CheckBox
+        android:id="@+id/rolling_selection"
+        android:text="@string/rolling"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:buttonTint="@color/ic_white"
+        android:textColor="@color/txWhite"
+        android:textSize="20sp"
+        app:layout_constraintTop_toBottomOf="@id/audio_selection"
+        app:layout_constraintStart_toStartOf="@id/previewView" />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/vertical_guideline"
         android:layout_width="wrap_content"

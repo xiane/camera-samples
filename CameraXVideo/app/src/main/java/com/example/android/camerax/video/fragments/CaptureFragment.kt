@@ -30,17 +30,16 @@ package com.example.android.camerax.video.fragments
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
+import android.opengl.Visibility
 import android.os.Build
 import java.text.SimpleDateFormat
 import android.os.Bundle
 import android.os.Environment
 import android.os.storage.StorageManager
-import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -63,6 +62,7 @@ import androidx.concurrent.futures.await
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.MutableLiveData
@@ -95,7 +95,11 @@ class CaptureFragment : Fragment() {
     private lateinit var recordingState:VideoRecordEvent
 
     private lateinit var getPath: ActivityResultLauncher<Intent>
-    private var pathUri:Uri? = null
+    private var currentPathUri:Uri? = null
+    private var currentUUID:String? = null
+    private lateinit var currentRecordingFileList: ArrayDeque<DocumentFile>
+    private var currentRecordingVolumeMin: Long = 1024 * 1024 * 1024
+    private var isRollingRecord:Boolean = true
 
     // Camera UI  states and inputs
     enum class UiState {
@@ -178,19 +182,18 @@ class CaptureFragment : Fragment() {
     @SuppressLint("MissingPermission")
     private fun startRecording() {
         // create MediaStoreOutputOptions for our recorder: resulting our recording!
-        val name = "CameraX-recording-" +
+        val name = "cctv-recording-" +
             SimpleDateFormat(FILENAME_FORMAT, Locale.US)
                 .format(System.currentTimeMillis()) + ".mp4"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, name)
-            put(MediaStore.Video.Media.TITLE, name)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-        }
-         val pendingRecording = pathUri?.let { uri ->
+
+         val pendingRecording = currentPathUri?.let { uri ->
              val folder = DocumentFile.fromTreeUri(requireContext(), uri)
-             val sub = folder?.listFiles()
-             val subFolder = sub?.find { it.name == "cctv" } ?: folder?.createDirectory("cctv")
+             val subFolder = folder
+                 ?.listFiles()
+                 ?.find { it.name == "cctv" } ?: folder?.createDirectory("cctv")
              val file = subFolder?.createFile("video/mp4", name)
+             currentRecordingFileList.offer(file)
+
              val fileDescriptor =
                  requireContext().contentResolver.openFileDescriptor(file!!.uri, "w")
              val fileDescriptorOutputOption =
@@ -320,6 +323,12 @@ class CaptureFragment : Fragment() {
             audioEnabled = captureViewBinding.audioSelection.isChecked
         }
 
+        // rollingEnabled by default is enabled.
+        captureViewBinding.rollingSelection.isChecked = isRollingRecord
+        captureViewBinding.rollingSelection.setOnClickListener {
+            isRollingRecord = captureViewBinding.rollingSelection.isChecked
+        }
+
         // React to user touching the capture button
         captureViewBinding.captureButton.apply {
             setOnClickListener {
@@ -359,6 +368,7 @@ class CaptureFragment : Fragment() {
                     recording.stop()
                     currentRecording = null
                     currentRecordingContinue = false
+                    currentRecordingFileList.clear()
                 }
                 captureViewBinding.captureButton.setImageResource(R.drawable.ic_start)
             }
@@ -376,10 +386,10 @@ class CaptureFragment : Fragment() {
 
         getPath = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
-                pathUri = result.data?.data
+                currentPathUri = result.data?.data
                 requireContext().contentResolver
                     .takePersistableUriPermission(
-                        pathUri!!,
+                        currentPathUri!!,
                         (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                     )
             }
@@ -402,6 +412,9 @@ class CaptureFragment : Fragment() {
                 AlertDialog.Builder(requireContext())
                     .setTitle("Select target Media")
                     .setItems(volumeArray) { dialog, which ->
+                        currentUUID = volumes[which].uuid
+                        currentRecordingVolumeMin =
+                            Math.min(currentVolume().totalSpace/10, 1024 * 1024 * 1024)
                         getPath.launch(
                             volumes[which].createAccessIntent(
                                 Environment.DIRECTORY_DCIM
@@ -435,6 +448,18 @@ class CaptureFragment : Fragment() {
                 is VideoRecordEvent.Status -> {
                     // placeholder: we update the UI with new status after this when() block.
                     // check size and save intervals.
+                    if (isVolumeFull()) {
+                        if (isRollingRecord)
+                            currentRecordingFileList.poll().delete()
+                        else {
+                            val recording = currentRecording
+                            if (recording != null) {
+                                recording.stop()
+                                currentRecording = null
+                            }
+                        }
+                    }
+
                     if (size > 5 * 1024 * 2) {
                         val recording = currentRecording
                         if (recording != null) {
@@ -463,11 +488,30 @@ class CaptureFragment : Fragment() {
         }
 
         var text = "${state}: recorded ${size}KB, in ${time}second"
-        if(event is VideoRecordEvent.Finalize)
-            text = "${text}\nFile saved to: ${event.outputResults.outputUri}"
+        if(event is VideoRecordEvent.Finalize) {
+            text = currentPathUri?.let {
+                "${text}\nFile saved to: ${currentPathUri}/cctv"
+            } ?: run {
+                "${text}\nFile saved to: ${event.outputResults.outputUri}"
+            }
+        }
 
         captureLiveStatus.value = text
         Log.i(TAG, "recording event: $text")
+    }
+
+    private fun currentVolume(): File {
+        return currentUUID?.let {
+            File("/storage/${currentUUID}")
+        }?: run {
+            File("/sdcard")
+        }
+    }
+
+    private fun isVolumeFull(): Boolean {
+        val volume = currentVolume()
+        Log.d(TAG, "total - ${volume.totalSpace}, free - ${volume.freeSpace}, usable - ${volume.usableSpace}")
+        return (volume.usableSpace < currentRecordingVolumeMin)
     }
 
     /**
@@ -480,6 +524,7 @@ class CaptureFragment : Fragment() {
                 captureViewBinding.captureButton,
                 captureViewBinding.stopButton,
                 captureViewBinding.audioSelection,
+                captureViewBinding.rollingSelection,
                 captureViewBinding.qualitySelection,
                 captureViewBinding.changePath).forEach {
                     it.isEnabled = enable
@@ -508,11 +553,13 @@ class CaptureFragment : Fragment() {
 
                     it.cameraButton.visibility= View.VISIBLE
                     it.audioSelection.visibility = View.VISIBLE
+                    it.rollingSelection.visibility = View.VISIBLE
                     it.qualitySelection.visibility=View.VISIBLE
                 }
                 UiState.RECORDING -> {
                     it.cameraButton.visibility = View.INVISIBLE
                     it.audioSelection.visibility = View.INVISIBLE
+                    it.rollingSelection.visibility = View.INVISIBLE
                     it.qualitySelection.visibility = View.INVISIBLE
 
                     it.captureButton.setImageResource(R.drawable.ic_pause)
@@ -525,6 +572,7 @@ class CaptureFragment : Fragment() {
                     it.stopButton.visibility = View.INVISIBLE
                     it.changePath.visibility = View.VISIBLE
                     it.changePath.isEnabled = true
+                    it.rollingSelection.visibility = View.VISIBLE
                 }
                 else -> {
                     val errorMsg = "Error: showUI($state) is not supported"
@@ -549,6 +597,8 @@ class CaptureFragment : Fragment() {
         qualityIndex = DEFAULT_QUALITY_IDX
         audioEnabled = false
         captureViewBinding.audioSelection.isChecked = audioEnabled
+        isRollingRecord = true
+        captureViewBinding.rollingSelection.isChecked = isRollingRecord
         initializeQualitySectionsUI()
     }
 
@@ -608,6 +658,7 @@ class CaptureFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        currentRecordingFileList = ArrayDeque()
         _captureViewBinding = FragmentCaptureBinding.inflate(inflater, container, false)
         return captureViewBinding.root
     }
