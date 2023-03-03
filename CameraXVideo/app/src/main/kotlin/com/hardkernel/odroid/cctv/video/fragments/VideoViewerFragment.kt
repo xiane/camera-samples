@@ -16,11 +16,9 @@
 
 // Simple VideoView to display the just captured video
 
-package com.example.android.camerax.video.fragments
+package com.hardkernel.odroid.cctv.video.fragments
 
-import android.content.ContentResolver
 import android.database.Cursor
-import android.database.CursorIndexOutOfBoundsException
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Build
@@ -33,11 +31,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.MediaController
 import androidx.navigation.fragment.navArgs
-import com.example.android.camerax.video.databinding.FragmentVideoViewerBinding
+import com.hardkernel.odroid.cctv.video.databinding.FragmentVideoViewerBinding
 import android.util.TypedValue
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.Navigation
-import com.example.android.camerax.video.R
+import com.hardkernel.odroid.cctv.video.R
 import kotlinx.coroutines.launch
 import java.lang.RuntimeException
 

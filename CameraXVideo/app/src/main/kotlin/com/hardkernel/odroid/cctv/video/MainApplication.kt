@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.android.camerax.video
+package com.hardkernel.odroid.cctv.video
 
 import android.app.Application
 import android.util.Log

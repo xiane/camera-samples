@@ -23,7 +23,7 @@ android {
     compileSdkVersion 31
     defaultConfig {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        applicationId "com.android.example.camerax.video"
+        applicationId "com.hardkernel.odroid.cctv.video"
         minSdkVersion 21
         targetSdkVersion 31
         versionCode 1
@@ -48,12 +48,12 @@ android {
 
     // Set the source of tests to same for both Unit and Instrumented tests
     sourceSets {
-        String sharedTestDir = 'src/test/java'
+        String sharedTestDir = 'src/test/kotlin'
         test {
-            java.srcDir sharedTestDir
+            kotlin.srcDir sharedTestDir
         }
         androidTest {
-            java.srcDir sharedTestDir
+            kotlin.srcDir sharedTestDir
         }
     }
 

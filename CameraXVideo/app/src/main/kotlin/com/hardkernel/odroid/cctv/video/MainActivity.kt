@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.example.android.camerax.video
+package com.hardkernel.odroid.cctv.video
 
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.example.android.camerax.video.databinding.ActivityMainBinding
+import com.hardkernel.odroid.cctv.video.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 

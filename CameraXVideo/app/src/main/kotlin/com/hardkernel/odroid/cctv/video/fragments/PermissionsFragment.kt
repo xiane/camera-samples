@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.android.camerax.video.fragments
+package com.hardkernel.odroid.cctv.video.fragments
 
 import android.Manifest
 import android.content.Context
@@ -31,8 +31,8 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.Navigation
-import com.example.android.camerax.video.R
-import com.example.android.camerax.video.databinding.FragmentPermissionBinding
+import com.hardkernel.odroid.cctv.video.R
+import com.hardkernel.odroid.cctv.video.databinding.FragmentPermissionBinding
 
 private var PERMISSIONS_REQUIRED = arrayOf(
     Manifest.permission.CAMERA,

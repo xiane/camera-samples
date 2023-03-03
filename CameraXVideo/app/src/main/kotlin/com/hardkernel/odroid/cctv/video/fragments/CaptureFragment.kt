@@ -26,7 +26,7 @@
  *   - this app starts VideoViewer fragment to view the captured result.
 */
 
-package com.example.android.camerax.video.fragments
+package com.hardkernel.odroid.cctv.video.fragments
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -34,7 +34,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
-import android.os.Build
 import java.text.SimpleDateFormat
 import android.os.Bundle
 import android.os.Environment
@@ -51,8 +50,8 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
-import com.example.android.camerax.video.R
-import com.example.android.camerax.video.databinding.FragmentCaptureBinding
+import com.hardkernel.odroid.cctv.video.R
+import com.hardkernel.odroid.cctv.video.databinding.FragmentCaptureBinding
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
@@ -68,9 +67,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.whenCreated
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.android.camera.utils.GenericListAdapter
-import com.example.android.camerax.video.extensions.getAspectRatio
-import com.example.android.camerax.video.extensions.getAspectRatioString
-import com.example.android.camerax.video.extensions.getNameString
+import com.hardkernel.odroid.cctv.video.extensions.getAspectRatio
+import com.hardkernel.odroid.cctv.video.extensions.getAspectRatioString
+import com.hardkernel.odroid.cctv.video.extensions.getNameString
 import kotlinx.coroutines.*
 import java.io.File
 import java.util.*

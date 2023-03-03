@@ -16,7 +16,7 @@
   -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.example.android.camerax.video">
+    package="com.hardkernel.odroid.cctv.video">
 
     <!-- Permission declarations -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -35,7 +35,7 @@
         tools:ignore="AllowBackup,GoogleAppIndexingWarning">
 
         <activity
-            android:name="com.example.android.camerax.video.MainActivity"
+            android:name="com.hardkernel.odroid.cctv.video.MainActivity"
             android:clearTaskOnLaunch="true"
             android:theme="@style/AppTheme"
             android:exported="true">
