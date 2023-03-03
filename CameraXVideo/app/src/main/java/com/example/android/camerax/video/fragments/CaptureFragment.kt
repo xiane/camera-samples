@@ -61,6 +61,7 @@ import androidx.camera.video.*
 import androidx.concurrent.futures.await
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.util.Consumer
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
@@ -652,12 +653,34 @@ class CaptureFragment : Fragment() {
         }
     }
 
+    private fun saveConfig() {
+        val settings = requireActivity().getPreferences(Context.MODE_PRIVATE) ?: return
+        settings.edit {
+            this.putString("currentPathUri", currentPathUri?.toString())
+            this.putString("currentUUID", currentUUID)
+            this.putLong("currentRecordingVolumeMin", currentRecordingVolumeMin)
+            this.putBoolean("isRollingRecord", isRollingRecord)
+        }
+    }
+
+    private fun loadConfig() {
+        val settings = requireActivity().getPreferences(Context.MODE_PRIVATE) ?: return
+        val pathUri = settings.getString("currentPathUri", null)
+
+        currentPathUri = pathUri?.let { Uri.parse(pathUri)}?: null
+        currentUUID = settings.getString("currentUUID", null)
+        currentRecordingVolumeMin =
+            settings.getLong("currentRecordingVolumeMin", 1024 * 1024  *1024)
+        isRollingRecord = settings.getBoolean("isRollingRecord", true)
+    }
+
     // System function implementations
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        loadConfig()
         currentRecordingFileList = ArrayDeque()
         _captureViewBinding = FragmentCaptureBinding.inflate(inflater, container, false)
         return captureViewBinding.root
@@ -669,7 +692,13 @@ class CaptureFragment : Fragment() {
     }
     override fun onDestroyView() {
         _captureViewBinding = null
+        saveConfig()
         super.onDestroyView()
+    }
+
+    override fun onStop() {
+        saveConfig()
+        super.onStop()
     }
 
     companion object {
