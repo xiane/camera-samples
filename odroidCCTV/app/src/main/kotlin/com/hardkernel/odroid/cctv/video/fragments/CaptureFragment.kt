@@ -567,6 +567,7 @@ class CaptureFragment : Fragment() {
                     it.changePath.visibility = View.VISIBLE
                     it.changePath.isEnabled = true
                     it.rollingSelection.visibility = View.VISIBLE
+                    it.rollingSelection.isEnabled = true
                 }
                 else -> {
                     val errorMsg = "Error: showUI($state) is not supported"
