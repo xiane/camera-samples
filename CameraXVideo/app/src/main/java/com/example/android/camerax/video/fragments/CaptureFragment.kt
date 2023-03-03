@@ -34,7 +34,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
-import android.opengl.Visibility
 import android.os.Build
 import java.text.SimpleDateFormat
 import android.os.Bundle
@@ -63,7 +62,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.util.Consumer
-import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.MutableLiveData
@@ -76,6 +74,7 @@ import com.example.android.camerax.video.extensions.getNameString
 import kotlinx.coroutines.*
 import java.io.File
 import java.util.*
+import kotlin.math.min
 
 class CaptureFragment : Fragment() {
 
@@ -399,11 +398,7 @@ class CaptureFragment : Fragment() {
         captureViewBinding.changePath.apply {
             setOnClickListener {
                 val manager = requireActivity().getSystemService(Context.STORAGE_SERVICE) as StorageManager
-                val volumes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    manager.storageVolumes
-                } else {
-                    TODO("VERSION.SDK_INT < N")
-                }
+                val volumes = manager.storageVolumes
 
                 var volumeArray: Array<String> = emptyArray()
                 volumes.forEach { volume ->
@@ -412,10 +407,10 @@ class CaptureFragment : Fragment() {
 
                 AlertDialog.Builder(requireContext())
                     .setTitle("Select target Media")
-                    .setItems(volumeArray) { dialog, which ->
+                    .setItems(volumeArray) { _, which ->
                         currentUUID = volumes[which].uuid
                         currentRecordingVolumeMin =
-                            Math.min(currentVolume().totalSpace/10, 1024 * 1024 * 1024)
+                            min(currentVolume().totalSpace/10, 1024 * 1024 * 1024)
                         getPath.launch(
                             volumes[which].createAccessIntent(
                                 Environment.DIRECTORY_DCIM
@@ -451,7 +446,7 @@ class CaptureFragment : Fragment() {
                     // check size and save intervals.
                     if (isVolumeFull()) {
                         if (isRollingRecord)
-                            currentRecordingFileList.poll().delete()
+                            currentRecordingFileList.poll()?.delete()
                         else {
                             val recording = currentRecording
                             if (recording != null) {
@@ -511,7 +506,6 @@ class CaptureFragment : Fragment() {
 
     private fun isVolumeFull(): Boolean {
         val volume = currentVolume()
-        Log.d(TAG, "total - ${volume.totalSpace}, free - ${volume.freeSpace}, usable - ${volume.usableSpace}")
         return (volume.usableSpace < currentRecordingVolumeMin)
     }
 
@@ -660,6 +654,7 @@ class CaptureFragment : Fragment() {
             this.putString("currentUUID", currentUUID)
             this.putLong("currentRecordingVolumeMin", currentRecordingVolumeMin)
             this.putBoolean("isRollingRecord", isRollingRecord)
+            this.putBoolean("audioEnabled", audioEnabled)
         }
     }
 
@@ -667,11 +662,12 @@ class CaptureFragment : Fragment() {
         val settings = requireActivity().getPreferences(Context.MODE_PRIVATE) ?: return
         val pathUri = settings.getString("currentPathUri", null)
 
-        currentPathUri = pathUri?.let { Uri.parse(pathUri)}?: null
+        currentPathUri = pathUri?.let { Uri.parse(pathUri)}
         currentUUID = settings.getString("currentUUID", null)
         currentRecordingVolumeMin =
             settings.getLong("currentRecordingVolumeMin", 1024 * 1024  *1024)
         isRollingRecord = settings.getBoolean("isRollingRecord", true)
+        audioEnabled = settings.getBoolean("audioEnabled", false)
     }
 
     // System function implementations
