@@ -455,7 +455,7 @@ class CaptureFragment : Fragment() {
                         }
                     }
 
-                    if (size > 5 * 1024 * 2) {
+                    if (stats.numBytesRecorded > 0x40000000) {
                         val recording = currentRecording
                         if (recording != null) {
                             recording.stop()
@@ -568,6 +568,8 @@ class CaptureFragment : Fragment() {
                     it.changePath.isEnabled = true
                     it.rollingSelection.visibility = View.VISIBLE
                     it.rollingSelection.isEnabled = true
+                    it.audioSelection.visibility = View.VISIBLE
+                    it.audioSelection.isEnabled = true
                 }
                 else -> {
                     val errorMsg = "Error: showUI($state) is not supported"
