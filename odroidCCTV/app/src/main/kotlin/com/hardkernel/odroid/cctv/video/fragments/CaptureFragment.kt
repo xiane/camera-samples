@@ -74,6 +74,7 @@ import kotlinx.coroutines.*
 import java.io.File
 import java.util.*
 import kotlin.math.min
+import java.util.concurrent.TimeUnit.NANOSECONDS
 
 class CaptureFragment : Fragment() {
 
@@ -99,6 +100,7 @@ class CaptureFragment : Fragment() {
     private lateinit var currentRecordingFileList: ArrayDeque<DocumentFile>
     private var currentRecordingVolumeMin: Long = 1024 * 1024 * 1024
     private var isRollingRecord:Boolean = true
+    private val MB = 1048576
 
     // Camera UI  states and inputs
     enum class UiState {
@@ -408,6 +410,8 @@ class CaptureFragment : Fragment() {
                     .setTitle("Select target Media")
                     .setItems(volumeArray) { _, which ->
                         currentUUID = volumes[which].uuid
+                        captureViewBinding.changePath.text =
+                            "MEDIA : ${currentUUID?.let {currentUUID} ?: "OnBoard"}"
                         currentRecordingVolumeMin =
                             min(currentVolume().totalSpace/10, 1024 * 1024 * 1024)
                         getPath.launch(
@@ -435,9 +439,6 @@ class CaptureFragment : Fragment() {
                     else event.getNameString()
 
         val stats = event.recordingStats
-        val size = stats.numBytesRecorded / 1000
-        val time = java.util.concurrent.TimeUnit.NANOSECONDS
-            .toSeconds(currentRecordingTimeSum + stats.recordedDurationNanos)
 
         when (event) {
                 is VideoRecordEvent.Status -> {
@@ -482,12 +483,15 @@ class CaptureFragment : Fragment() {
                 }
         }
 
-        var text = "${state}: recorded ${size}KB, in ${time}second"
+        val size = stats.numBytesRecorded / MB
+        val time = NANOSECONDS.toSeconds(currentRecordingTimeSum + stats.recordedDurationNanos)
+
+        var text = "${state}: recorded ${time/60}minute ${time%60}second(${size}MB)"
         if(event is VideoRecordEvent.Finalize) {
             text = currentPathUri?.let {
-                "${text}\nFile saved to: ${currentPathUri}/cctv"
+                "${text}\nFile saved to: ${currentPathUri!!.path}/cctv"
             } ?: run {
-                "${text}\nFile saved to: ${event.outputResults.outputUri}"
+                "${text}\nFile saved to: ${event.outputResults.outputUri.path}"
             }
         }
 
@@ -681,6 +685,9 @@ class CaptureFragment : Fragment() {
         loadConfig()
         currentRecordingFileList = ArrayDeque()
         _captureViewBinding = FragmentCaptureBinding.inflate(inflater, container, false)
+
+        captureViewBinding.changePath.text =
+            "MEDIA : ${currentUUID?.let {currentUUID} ?: "OnBoard"}"
         return captureViewBinding.root
     }
 
