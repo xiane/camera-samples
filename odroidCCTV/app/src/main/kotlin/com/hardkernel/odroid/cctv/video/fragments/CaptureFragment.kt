@@ -118,6 +118,7 @@ class CaptureFragment : Fragment() {
 
     private var currentRecordingTimeSum:Long = 0
     private var currentRecordingContinue:Boolean = false
+    private var stopInSequence: Boolean = true
 
     // main cameraX capture functions
     /**
@@ -340,7 +341,10 @@ class CaptureFragment : Fragment() {
                     currentRecordingTimeSum = 0
                     currentRecordingContinue = true
                     captureViewBinding.changePath.visibility = View.INVISIBLE
-                    startRecording()
+                    if (stopInSequence) {
+                        startRecording()
+                        stopInSequence = false
+                    }
                 } else {
                     when (recordingState) {
                         is VideoRecordEvent.Start -> {
@@ -367,6 +371,7 @@ class CaptureFragment : Fragment() {
                 val recording = currentRecording
                 if (recording != null) {
                     recording.stop()
+                    stopInSequence = true
                     currentRecording = null
                     currentRecordingContinue = false
                     currentRecordingFileList.clear()
@@ -451,6 +456,7 @@ class CaptureFragment : Fragment() {
                             val recording = currentRecording
                             if (recording != null) {
                                 recording.stop()
+                                stopInSequence = true
                                 currentRecording = null
                             }
                         }
@@ -460,6 +466,7 @@ class CaptureFragment : Fragment() {
                         val recording = currentRecording
                         if (recording != null) {
                             recording.stop()
+                            stopInSequence = true
                             currentRecording = null
                         }
                     }
@@ -470,7 +477,10 @@ class CaptureFragment : Fragment() {
                 is VideoRecordEvent.Finalize-> {
                     if (currentRecordingContinue) {
                         currentRecordingTimeSum += event.recordingStats.recordedDurationNanos
-                        startRecording()
+                        if (stopInSequence) {
+                            startRecording()
+                            stopInSequence = false
+                        }
                         Log.d(TAG, "uri " + event.outputResults.outputUri)
                     } else
                         showUI(UiState.FINALIZED, event.getNameString())
