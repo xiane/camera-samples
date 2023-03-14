@@ -720,6 +720,6 @@ class CaptureFragment : Fragment() {
         // default Quality selection if no input from UI
         const val DEFAULT_QUALITY_IDX = 0
         val TAG:String = CaptureFragment::class.java.simpleName
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+        private const val FILENAME_FORMAT = "yyyyMMdd-HH:mm:ss.SSS"
     }
 }
