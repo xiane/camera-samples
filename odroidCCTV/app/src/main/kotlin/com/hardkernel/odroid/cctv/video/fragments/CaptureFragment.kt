@@ -204,6 +204,8 @@ class CaptureFragment : Fragment() {
                  .prepareRecording(requireContext(), fileDescriptorOutputOption)
         } ?: run {
             val file = File("/sdcard/DCIM/cctv", name)
+             val docFile = DocumentFile.fromFile(file)
+             currentRecordingFileList.offer(docFile)
             val fileOutputOption = FileOutputOptions.Builder(file).build()
             videoCapture.output
                 .prepareRecording(requireActivity(), fileOutputOption)
@@ -462,7 +464,7 @@ class CaptureFragment : Fragment() {
                         }
                     }
 
-                    if (stats.numBytesRecorded > 0x40000000) {
+                    if (stats.numBytesRecorded > RECORD_SEPARATE_SIZE) {
                         val recording = currentRecording
                         if (recording != null) {
                             recording.stop()
@@ -721,5 +723,6 @@ class CaptureFragment : Fragment() {
         const val DEFAULT_QUALITY_IDX = 0
         val TAG:String = CaptureFragment::class.java.simpleName
         private const val FILENAME_FORMAT = "yyyyMMdd-HH:mm:ss.SSS"
+        private const val RECORD_SEPARATE_SIZE = 0x40000000
     }
 }
