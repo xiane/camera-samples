@@ -183,6 +183,11 @@ class CaptureFragment : Fragment() {
      */
     @SuppressLint("MissingPermission")
     private fun startRecording() {
+        // check it start with basic sequence
+        // It can cause when USB HID like keyboard is removed or attached.
+        if (!stopInSequence)
+            return
+
         // create MediaStoreOutputOptions for our recorder: resulting our recording!
         val name = "cctv-recording-" +
             SimpleDateFormat(FILENAME_FORMAT, Locale.US)
@@ -216,6 +221,25 @@ class CaptureFragment : Fragment() {
             .start(mainThreadExecutor, captureListener)
 
         Log.i(TAG, "Recording started")
+    }
+
+    /**
+     * stop the video recording
+     *   - check stop sequence true
+     *   - kick stop to recorder
+     *  you can fish recording stuff in here
+     */
+    private fun stopRecording(isFinsh: Boolean) {
+        val recording = currentRecording
+        if (recording != null) {
+            recording.stop()
+            stopInSequence = true
+            currentRecording = null
+            if (isFinsh) {
+                currentRecordingContinue = false
+                currentRecordingFileList.clear()
+            }
+        }
     }
 
     /**
@@ -343,10 +367,7 @@ class CaptureFragment : Fragment() {
                     currentRecordingTimeSum = 0
                     currentRecordingContinue = true
                     captureViewBinding.changePath.visibility = View.INVISIBLE
-                    if (stopInSequence) {
-                        startRecording()
-                        stopInSequence = false
-                    }
+                    startRecording()
                 } else {
                     when (recordingState) {
                         is VideoRecordEvent.Start -> {
@@ -370,14 +391,7 @@ class CaptureFragment : Fragment() {
                     return@setOnClickListener
                 }
 
-                val recording = currentRecording
-                if (recording != null) {
-                    recording.stop()
-                    stopInSequence = true
-                    currentRecording = null
-                    currentRecordingContinue = false
-                    currentRecordingFileList.clear()
-                }
+                stopRecording(true)
                 captureViewBinding.captureButton.setImageResource(R.drawable.ic_start)
             }
             // ensure the stop button is initialized disabled & invisible
@@ -449,28 +463,21 @@ class CaptureFragment : Fragment() {
 
         when (event) {
                 is VideoRecordEvent.Status -> {
-                    // placeholder: we update the UI with new status after this when() block.
-                    // check size and save intervals.
+                    /**
+                     * Storage volume check:
+                     *   - with rolling record, just remove fisrt reconrding file.
+                     *   - or just stop.
+                     */
                     if (isVolumeFull()) {
                         if (isRollingRecord)
                             currentRecordingFileList.poll()?.delete()
                         else {
-                            val recording = currentRecording
-                            if (recording != null) {
-                                recording.stop()
-                                stopInSequence = true
-                                currentRecording = null
-                            }
+                            stopRecording(true)
                         }
                     }
 
                     if (stats.numBytesRecorded > RECORD_SEPARATE_SIZE) {
-                        val recording = currentRecording
-                        if (recording != null) {
-                            recording.stop()
-                            stopInSequence = true
-                            currentRecording = null
-                        }
+                        stopRecording(false)
                     }
                 }
                 is VideoRecordEvent.Start -> {
@@ -479,10 +486,7 @@ class CaptureFragment : Fragment() {
                 is VideoRecordEvent.Finalize-> {
                     if (currentRecordingContinue) {
                         currentRecordingTimeSum += event.recordingStats.recordedDurationNanos
-                        if (stopInSequence) {
-                            startRecording()
-                            stopInSequence = false
-                        }
+                        startRecording()
                         Log.d(TAG, "uri " + event.outputResults.outputUri)
                     } else
                         showUI(UiState.FINALIZED, event.getNameString())
