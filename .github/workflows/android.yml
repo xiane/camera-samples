@@ -34,7 +34,8 @@ jobs:
           distribution: 'zulu'
           java-version: '11'
       - name: Build project
-        run: .github/scripts/gradlew_recursive.sh assembleDebug
+        working-directory: ./odroidCCTV
+        run: bash ./gradlew -Pci --no-parallel --stacktrace assembleDebug
       - name: Zip artifacts
         run: zip -r assemble.zip . -i '**/build/*.apk' '**/build/*.aab' '**/build/*.aar' '**/build/*.so'
       - name: Upload artifacts
